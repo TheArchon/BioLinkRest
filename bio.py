@@ -4,6 +4,9 @@ User: https://t.me/BisnuRay
 Channel: https://t.me/itsSmartDev
 """
 
+import os
+import sys
+import subprocess
 from pyrogram import Client, filters, errors
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ChatPermissions
 
