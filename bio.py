@@ -226,7 +226,7 @@ async def start_handler(client: Client, message):
         [
             InlineKeyboardButton(
                 "🛠️ Support",
-                url="https://t.me/itsSmartDev"
+                url="https://t.me/ArchonNetwork"
             ),
             InlineKeyboardButton(
                 "🗑️ Close",
