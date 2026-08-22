@@ -1,7 +1,7 @@
 """
-Author: Archon
-User: https://t.me/ArchonCEO
-Channel: https://t.me/ArchonNetwork 
+Author: Bisnu Ray
+User: https://t.me/BisnuRay
+Channel: https://t.me/itsSmartDev
 """
 
 import os
@@ -40,7 +40,6 @@ app = Client(
 
 @app.on_message(filters.private & filters.command("update"))
 async def update_handler(client: Client, message):
-    # Only OWNER_ID can use /update
     if message.from_user.id != OWNER_ID:
         return await message.reply_text(
             "❌ You are not authorized to use this command."
@@ -51,29 +50,7 @@ async def update_handler(client: Client, message):
     )
 
     try:
-        # Directory where bot.py is located
         repo_dir = os.path.dirname(os.path.abspath(__file__))
-
-        # Check whether this is actually a Git repository
-        git_check = subprocess.run(
-            ["git", "rev-parse", "--is-inside-work-tree"],
-            cwd=repo_dir,
-            capture_output=True,
-            text=True,
-            timeout=30
-        )
-
-        if git_check.returncode != 0:
-            return await status.edit_text(
-                "❌ **Update failed.**\n\n"
-                "This bot folder is not a Git repository.\n"
-                "Please clone the GitHub repository instead of running it from a ZIP."
-            )
-
-        # Fetch latest information from GitHub
-        await status.edit_text(
-            "🔄 **Checking latest GitHub commit...**"
-        )
 
         fetch = subprocess.run(
             ["git", "fetch", "origin", "main"],
@@ -84,14 +61,12 @@ async def update_handler(client: Client, message):
         )
 
         if fetch.returncode != 0:
-            error = fetch.stderr or fetch.stdout or "Unknown Git error"
             return await status.edit_text(
                 f"❌ **GitHub check failed.**\n\n"
-                f"`{error[-3000:]}`"
+                f"`{(fetch.stderr or fetch.stdout or 'Unknown error')[-3000:]}`"
             )
 
-        # Check whether local code is already up to date
-        local_commit = subprocess.run(
+        local = subprocess.run(
             ["git", "rev-parse", "HEAD"],
             cwd=repo_dir,
             capture_output=True,
@@ -99,7 +74,7 @@ async def update_handler(client: Client, message):
             timeout=30
         )
 
-        remote_commit = subprocess.run(
+        remote = subprocess.run(
             ["git", "rev-parse", "origin/main"],
             cwd=repo_dir,
             capture_output=True,
@@ -107,31 +82,22 @@ async def update_handler(client: Client, message):
             timeout=30
         )
 
-        if (
-            local_commit.returncode != 0
-            or remote_commit.returncode != 0
-        ):
+        if local.returncode != 0 or remote.returncode != 0:
             return await status.edit_text(
                 "❌ Could not compare local and GitHub commits."
             )
 
-        local_hash = local_commit.stdout.strip()
-        remote_hash = remote_commit.stdout.strip()
-
-        # No new commit
-        if local_hash == remote_hash:
+        if local.stdout.strip() == remote.stdout.strip():
             return await status.edit_text(
                 "✅ **Already up to date!**\n\n"
                 "No new commit was found on GitHub."
             )
 
-        # New commit found
         await status.edit_text(
-            "🆕 **New update found!**\n\n"
+            "🆕 **New commit found!**\n\n"
             "📥 Downloading latest code..."
         )
 
-        # Pull latest code
         pull = subprocess.run(
             [
                 "git",
@@ -148,20 +114,17 @@ async def update_handler(client: Client, message):
         )
 
         if pull.returncode != 0:
-            error = pull.stderr or pull.stdout or "Unknown Git error"
-
             return await status.edit_text(
-                f"❌ **GitHub update failed.**\n\n"
-                f"`{error[-3000:]}`"
+                f"❌ **Update failed.**\n\n"
+                f"`{(pull.stderr or pull.stdout or 'Unknown error')[-3000:]}`"
             )
 
-        # Update dependencies if requirements.txt exists
-        requirements_file = os.path.join(
+        requirements = os.path.join(
             repo_dir,
             "requirements.txt"
         )
 
-        if os.path.exists(requirements_file):
+        if os.path.exists(requirements):
             await status.edit_text(
                 "📦 **Updating dependencies...**"
             )
@@ -182,25 +145,28 @@ async def update_handler(client: Client, message):
             )
 
             if install.returncode != 0:
-                error = (
-                    install.stderr
-                    or install.stdout
-                    or "pip install failed"
-                )
-
                 return await status.edit_text(
                     f"❌ **Dependency update failed.**\n\n"
-                    f"`{error[-3000:]}`"
+                    f"`{(install.stderr or install.stdout or 'pip failed')[-3000:]}`"
                 )
 
-        # Get latest commit information
+        # Check updated bio.py before restarting
+        check = subprocess.run(
+            [sys.executable, "-m", "py_compile", "bio.py"],
+            cwd=repo_dir,
+            capture_output=True,
+            text=True,
+            timeout=60
+        )
+
+        if check.returncode != 0:
+            return await status.edit_text(
+                f"❌ **Update downloaded, but bio.py has a syntax error.**\n\n"
+                f"`{(check.stderr or check.stdout or 'Syntax error')[-3000:]}`"
+            )
+
         latest_commit = subprocess.run(
-            [
-                "git",
-                "log",
-                "-1",
-                "--pretty=format:%h - %s"
-            ],
+            ["git", "log", "-1", "--pretty=format:%h - %s"],
             cwd=repo_dir,
             capture_output=True,
             text=True,
@@ -215,7 +181,6 @@ async def update_handler(client: Client, message):
             "♻️ **Restarting bot...**"
         )
 
-        # Replace current Python process with the updated bot
         os.execl(
             sys.executable,
             sys.executable,
@@ -257,16 +222,11 @@ async def start_handler(client: Client, message):
     )
 
     kb = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton(
-                "➕ Add Me to Your Group",
-                url=add_url
-            )
-        ],
+        [InlineKeyboardButton("➕ Add Me to Your Group", url=add_url)],
         [
             InlineKeyboardButton(
                 "🛠️ Support",
-                url="https://t.me/ArchonNetwork"
+                url="https://t.me/itsSmartDev"
             ),
             InlineKeyboardButton(
                 "🗑️ Close",
@@ -295,7 +255,8 @@ async def help_handler(client: Client, message):
         "`/config` – set warn-limit & punishment mode\n"
         "`/free` – whitelist a user (reply or user/id)\n"
         "`/unfree` – remove from whitelist\n"
-        "`/freelist` – list all whitelisted users\n\n"
+        "`/freelist` – list all whitelisted users\n"
+        "`/update` – update bot from GitHub\n\n"
         "**When someone with a URL in their bio posts, I’ll:**\n"
         " 1. ⚠️ Warn them\n"
         " 2. 🔇 Mute if they exceed limit\n"
@@ -398,7 +359,8 @@ async def command_free(client: Client, message):
     await reset_warnings(chat_id, target.id)
 
     text = (
-        f"**✅ {target.mention} has been added to the whitelist**"
+        f"**✅ {target.mention} has been added "
+        "to the whitelist**"
     )
 
     keyboard = InlineKeyboardMarkup([
@@ -450,11 +412,10 @@ async def command_unfree(client: Client, message):
 
     if await is_whitelisted(chat_id, target.id):
         await remove_whitelist(chat_id, target.id)
-
         text = (
-            f"**🚫 {target.mention} has been removed from the whitelist**"
+            f"**🚫 {target.mention} has been "
+            "removed from the whitelist**"
         )
-
     else:
         text = (
             f"**ℹ️ {target.mention} is not whitelisted.**"
@@ -514,7 +475,7 @@ async def command_freelist(client: Client, message):
 
             text += f"{i}: {name} [`{uid}`]\n"
 
-        except:
+        except Exception:
             text += (
                 f"{i}: [User not found] [`{uid}`]\n"
             )
@@ -536,7 +497,7 @@ async def command_freelist(client: Client, message):
 
 
 # ============================================================
-# CALLBACK HANDLER
+# CALLBACKS
 # ============================================================
 
 @app.on_callback_query()
@@ -724,7 +685,6 @@ async def callback_handler(client: Client, callback_query):
                     target_id,
                     ChatPermissions(can_send_messages=True)
                 )
-
             else:
                 await client.unban_chat_member(
                     chat_id,
@@ -738,7 +698,7 @@ async def callback_handler(client: Client, callback_query):
 
             msg = (
                 f"**{name} (`{target_id}`) has been "
-                f"{'unmuted' if action == 'unmute' else 'unbanned'}.**"
+                f"{'unmuted' if action == 'unmute' else 'unbanned'}**."
             )
 
             kb = InlineKeyboardMarkup([
@@ -898,9 +858,9 @@ async def check_bio(client: Client, message):
     chat_id = message.chat.id
     user_id = message.from_user.id
 
-    if await is_admin(client, chat_id, user_id) or await is_whitelisted(
-        chat_id,
-        user_id
+    if (
+        await is_admin(client, chat_id, user_id)
+        or await is_whitelisted(chat_id, user_id)
     ):
         return
 
@@ -918,6 +878,7 @@ async def check_bio(client: Client, message):
     )
 
     if URL_PATTERN.search(bio):
+
         try:
             await message.delete()
 
@@ -1070,7 +1031,7 @@ async def check_bio(client: Client, message):
 
 
 # ============================================================
-# START BOT
+# RUN
 # ============================================================
 
 if __name__ == "__main__":
